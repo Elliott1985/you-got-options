@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>You Got Options - RSI Trading Bot</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1 class="title">YOU GOT OPTIONS</h1>
+            <p class="subtitle">RSI-Based Options Trading Bot</p>
+            <div class="accent-line"></div>
+        </header>
+
+        <!-- Input Section -->
+        <section class="input-section">
+            <div class="input-card">
+                <h2>Market Analysis</h2>
+                <form id="analysisForm" class="form">
+                    <div class="input-group">
+                        <label for="ticker">Stock Ticker (Optional)</label>
+                        <input type="text" id="ticker" name="ticker" placeholder="e.g., AAPL, TSLA" maxlength="5">
+                        <small>Leave empty to get suggestions based on budget</small>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="budget">Budget (Optional)</label>
+                        <input type="number" id="budget" name="budget" placeholder="e.g., 1000" min="1" step="0.01">
+                        <small>Enter your available trading budget in USD</small>
+                    </div>
+                    
+                    <button type="submit" class="analyze-btn" id="analyzeBtn">
+                        <span class="btn-text">ANALYZE</span>
+                        <div class="btn-glow"></div>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Loading Section -->
+        <div id="loadingSection" class="loading-section hidden">
+            <div class="loading-spinner"></div>
+            <p>Analyzing market data...</p>
+        </div>
+
+        <!-- Results Section -->
+        <section id="resultsSection" class="results-section hidden">
+            <!-- Stock Info Card -->
+            <div class="result-card" id="stockInfoCard">
+                <h3 id="stockTitle">Stock Analysis</h3>
+                <div class="stock-info">
+                    <div class="info-item">
+                        <span class="label">Current Price:</span>
+                        <span class="value" id="currentPrice">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">RSI Value:</span>
+                        <span class="value" id="rsiValue">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Analysis Date:</span>
+                        <span class="value" id="analysisDate">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recommendation Card -->
+            <div class="result-card" id="recommendationCard">
+                <h3>Trading Recommendation</h3>
+                <div class="recommendation">
+                    <div class="action" id="actionText">-</div>
+                    <div class="signal" id="signalText">-</div>
+                    <div class="reason" id="reasonText">-</div>
+                    <div class="strength" id="strengthText">-</div>
+                </div>
+            </div>
+
+            <!-- Budget Analysis Card -->
+            <div class="result-card" id="budgetCard" style="display: none;">
+                <h3>Budget Analysis</h3>
+                <div class="budget-info">
+                    <div class="info-item">
+                        <span class="label">Max Shares:</span>
+                        <span class="value" id="maxShares">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Total Cost:</span>
+                        <span class="value" id="totalCost">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Remaining Budget:</span>
+                        <span class="value" id="remainingBudget">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart Section -->
+            <div class="chart-card">
+                <h3>Price & RSI Chart (Last 90 Days)</h3>
+                <div class="chart-container">
+                    <canvas id="priceChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Suggestions Section -->
+        <section id="suggestionsSection" class="suggestions-section hidden">
+            <div class="result-card">
+                <h3 id="suggestionsTitle">Stock Suggestions</h3>
+                <p id="suggestionsMessage"></p>
+                <div class="suggestions-grid" id="suggestionsGrid">
+                    <!-- Suggestions will be populated by JavaScript -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Error Section -->
+        <div id="errorSection" class="error-section hidden">
+            <div class="error-card">
+                <h3>⚠️ Error</h3>
+                <p id="errorMessage">Something went wrong. Please try again.</p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>⚠️ <strong>Disclaimer:</strong> This is for educational purposes only. Not financial advice. Trade at your own risk.</p>
+            <p class="future-feature">🚀 Future Feature: Live Trade Tracking (Coming Soon)</p>
+        </footer>
+    </div>
+
+    <script>
+        let priceChart = null;
+
+        // Form submission handler
+        document.getElementById('analysisForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const ticker = document.getElementById('ticker').value.trim().toUpperCase();
+            const budget = document.getElementById('budget').value;
+            
+            // Validate input
+            if (!ticker && !budget) {
+                showError('Please provide either a stock ticker or a budget amount.');
+                return;
+            }
+            
+            showLoading();
+            hideAllSections();
+            
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        ticker: ticker,
+                        budget: budget ? parseFloat(budget) : null
+                    })
+                });
+                
+                const data = await response.json();
+                
+                hideLoading();
+                
+                if (data.success) {
+                    if (data.suggestions) {
+                        showSuggestions(data);
+                    } else {
+                        showResults(data);
+                    }
+                } else {
+                    showError(data.error || 'Analysis failed. Please try again.');
+                }
+                
+            } catch (error) {
+                hideLoading();
+                showError('Network error. Please check your connection and try again.');
+                console.error('Error:', error);
+            }
+        });
+
+        function showLoading() {
+            document.getElementById('loadingSection').classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingSection').classList.add('hidden');
+        }
+
+        function hideAllSections() {
+            document.getElementById('resultsSection').classList.add('hidden');
+            document.getElementById('suggestionsSection').classList.add('hidden');
+            document.getElementById('errorSection').classList.add('hidden');
+        }
+
+        function showResults(data) {
+            // Update stock info
+            document.getElementById('stockTitle').textContent = `${data.company_name} (${data.ticker})`;
+            document.getElementById('currentPrice').textContent = `$${data.current_price}`;
+            document.getElementById('rsiValue').textContent = data.current_rsi.toFixed(2);
+            document.getElementById('analysisDate').textContent = data.analysis_date;
+
+            // Update recommendation
+            const rec = data.recommendation;
+            document.getElementById('actionText').textContent = rec.action;
+            document.getElementById('actionText').style.color = rec.color;
+            document.getElementById('signalText').textContent = `${rec.signal} (${rec.strength})`;
+            document.getElementById('reasonText').textContent = rec.reason;
+
+            // Update budget info if available
+            if (data.shares_info && Object.keys(data.shares_info).length > 0) {
+                document.getElementById('budgetCard').style.display = 'block';
+                document.getElementById('maxShares').textContent = data.shares_info.max_shares;
+                document.getElementById('totalCost').textContent = `$${data.shares_info.total_cost.toFixed(2)}`;
+                document.getElementById('remainingBudget').textContent = `$${data.shares_info.remaining_budget.toFixed(2)}`;
+            }
+
+            // Update chart
+            updateChart(data.chart_data);
+
+            document.getElementById('resultsSection').classList.remove('hidden');
+        }
+
+        function showSuggestions(data) {
+            document.getElementById('suggestionsMessage').textContent = data.message;
+            
+            const grid = document.getElementById('suggestionsGrid');
+            grid.innerHTML = '';
+            
+            data.suggestions.forEach(stock => {
+                const card = document.createElement('div');
+                card.className = 'suggestion-card';
+                card.innerHTML = `
+                    <h4>${stock.ticker}</h4>
+                    <p class="company-name">${stock.name}</p>
+                    <div class="stock-details">
+                        <p><strong>Price:</strong> $${stock.price}</p>
+                        <p><strong>Max Shares:</strong> ${stock.max_shares}</p>
+                        <p><strong>Total Cost:</strong> $${stock.total_cost}</p>
+                    </div>
+                    <button class="select-stock-btn" onclick="selectStock('${stock.ticker}')">
+                        Analyze This Stock
+                    </button>
+                `;
+                grid.appendChild(card);
+            });
+            
+            document.getElementById('suggestionsSection').classList.remove('hidden');
+        }
+
+        function selectStock(ticker) {
+            document.getElementById('ticker').value = ticker;
+            document.getElementById('analysisForm').dispatchEvent(new Event('submit'));
+        }
+
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorSection').classList.remove('hidden');
+        }
+
+        function updateChart(chartData) {
+            const ctx = document.getElementById('priceChart').getContext('2d');
+            
+            if (priceChart) {
+                priceChart.destroy();
+            }
+            
+            const dates = chartData.map(d => d.date);
+            const prices = chartData.map(d => d.close);
+            const rsiData = chartData.map(d => d.rsi).filter(r => r !== null);
+            const rsiDates = chartData.filter(d => d.rsi !== null).map(d => d.date);
+            
+            priceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: 'Close Price ($)',
+                        data: prices,
+                        borderColor: '#00ff88',
+                        backgroundColor: 'rgba(0, 255, 136, 0.1)',
+                        borderWidth: 2,
+                        yAxisID: 'y'
+                    }, {
+                        label: 'RSI',
+                        data: rsiData,
+                        borderColor: '#ffa502',
+                        backgroundColor: 'rgba(255, 165, 2, 0.1)',
+                        borderWidth: 2,
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#ffffff'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'day',
+                                displayFormats: {
+                                    day: 'MMM dd'
+                                }
+                            },
+                            ticks: {
+                                color: '#ffffff'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            ticks: {
+                                color: '#00ff88'
+                            },
+                            grid: {
+                                color: 'rgba(0, 255, 136, 0.1)'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            min: 0,
+                            max: 100,
+                            ticks: {
+                                color: '#ffa502'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                        },
+                    }
+                }
+            });
+        }
+
+        // Add hover effects to buttons
+        document.querySelectorAll('.analyze-btn, .select-stock-btn').forEach(btn => {
+            btn.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-2px)';
+            });
+            
+            btn.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+    </script>
+</body>
+</html>
