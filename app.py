@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify, session
+from flask_cors import CORS
 import yfinance as yf
 import pandas as pd
 from datetime import datetime, timedelta
@@ -10,6 +11,7 @@ import json
 import os
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-change-this-in-production')
 
 # In-memory storage for active trades (in production, use a database)
@@ -88,6 +90,106 @@ def get_demo_analysis(ticker, budget):
     
     return jsonify(response)
 
+def get_demo_analysis_for_ticker(ticker, budget):
+    """Return demo analysis data for specific ticker when Yahoo Finance is unavailable"""
+    import numpy as np
+    from datetime import datetime, timedelta
+    
+    # Realistic price ranges for popular stocks
+    ticker_data = {
+        'AAPL': {'price': 175.25, 'name': 'Apple Inc.'},
+        'MSFT': {'price': 338.50, 'name': 'Microsoft Corporation'},
+        'GOOGL': {'price': 138.75, 'name': 'Alphabet Inc.'},
+        'TSLA': {'price': 248.50, 'name': 'Tesla, Inc.'},
+        'META': {'price': 312.75, 'name': 'Meta Platforms, Inc.'},
+        'NVDA': {'price': 445.80, 'name': 'NVIDIA Corporation'},
+        'AMZN': {'price': 145.25, 'name': 'Amazon.com, Inc.'},
+        'SPY': {'price': 428.75, 'name': 'SPDR S&P 500 ETF'},
+        'DEMO': {'price': 150.25, 'name': 'Demo Company Inc.'},
+        'TEST': {'price': 150.25, 'name': 'Test Company Inc.'}
+    }
+    
+    # Get ticker info or use default
+    info = ticker_data.get(ticker.upper(), {'price': 150.25, 'name': f'{ticker} Corporation'})
+    current_price = info['price']
+    company_name = f"{info['name']} (Demo Data)"
+    
+    # Generate realistic RSI (vary by ticker)
+    rsi_base = {'AAPL': 65.8, 'MSFT': 58.2, 'GOOGL': 72.1, 'TSLA': 45.5, 
+                'META': 55.9, 'NVDA': 68.3, 'AMZN': 62.7, 'SPY': 52.4}.get(ticker.upper(), 65.8)
+    current_rsi = rsi_base + np.random.normal(0, 3)  # Add some variation
+    current_rsi = max(10, min(90, current_rsi))  # Keep in realistic range
+    
+    # Generate fake but realistic data
+    dates = [(datetime.now() - timedelta(days=x)) for x in range(90, 0, -1)]
+    prices = []
+    base_price = current_price * 0.95  # Start slightly lower
+    
+    # Generate realistic price movements
+    for i in range(90):
+        # Add some random walk with slight upward trend
+        change = np.random.normal(0.5, 2)  # Slight bullish bias
+        base_price += change
+        base_price = max(base_price, current_price * 0.8)  # Floor
+        prices.append(base_price)
+    
+    # Ensure last price matches current price
+    prices[-1] = current_price
+    
+    # Calculate RSI and MACD on fake data
+    price_series = pd.Series(prices)
+    rsi_values = calculate_rsi(price_series)
+    macd_data = calculate_macd(price_series)
+    
+    # Override the last RSI value with our realistic one
+    rsi_values.iloc[-1] = current_rsi
+    
+    # Format chart data
+    chart_formatted = []
+    for i, date in enumerate(dates):
+        price = prices[i]
+        chart_formatted.append({
+            'date': date.strftime('%Y-%m-%d'),
+            'open': round(price * 0.999, 2),
+            'high': round(price * 1.005, 2),
+            'low': round(price * 0.995, 2),
+            'close': round(price, 2),
+            'volume': int(np.random.normal(1000000, 200000)),
+            'rsi': round(rsi_values.iloc[i], 2) if pd.notna(rsi_values.iloc[i]) else None,
+            'macd': round(macd_data['macd'].iloc[i], 4) if i < len(macd_data['macd']) and pd.notna(macd_data['macd'].iloc[i]) else None,
+            'macd_signal': round(macd_data['signal'].iloc[i], 4) if i < len(macd_data['signal']) and pd.notna(macd_data['signal'].iloc[i]) else None,
+            'macd_histogram': round(macd_data['histogram'].iloc[i], 4) if i < len(macd_data['histogram']) and pd.notna(macd_data['histogram'].iloc[i]) else None
+        })
+    
+    # Get trading recommendation with MACD
+    recommendation = get_trading_recommendation(current_rsi, macd_data)
+    
+    # Calculate shares info if budget provided
+    shares_info = {}
+    if budget:
+        max_shares = int(budget // current_price)
+        shares_info = {
+            'max_shares': max_shares,
+            'cost_per_share': current_price,
+            'total_cost': max_shares * current_price,
+            'remaining_budget': budget - (max_shares * current_price)
+        }
+    
+    response = {
+        'success': True,
+        'ticker': ticker.upper(),
+        'company_name': company_name,
+        'current_price': round(current_price, 2),
+        'current_rsi': round(current_rsi, 2),
+        'recommendation': recommendation,
+        'chart_data': chart_formatted,
+        'shares_info': shares_info,
+        'analysis_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'demo_note': f'⚠️ Demo data for {ticker} - Real data available on live deployment'
+    }
+    
+    return jsonify(response)
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -159,18 +261,30 @@ def analyze_stock():
         
         if hist_data is None or hist_data.empty or len(hist_data) < 14:
             # Check if this is a demo request (for testing when Yahoo Finance is down)
-            if ticker.upper() in ['DEMO', 'TEST']:
-                return get_demo_analysis(ticker, budget)
+            if ticker.upper() in ['DEMO', 'TEST'] or '-DEMO' in ticker.upper():
+                # Extract the base ticker if it's in format like "AAPL-DEMO"
+                base_ticker = ticker.upper().replace('-DEMO', '') if '-DEMO' in ticker.upper() else ticker
+                return get_demo_analysis_for_ticker(base_ticker, budget)
             
-            if "Too Many Requests" in str(error_msg) or "rate limit" in str(error_msg).lower():
+            # For popular tickers, offer demo analysis as fallback
+            popular_tickers = ['AAPL', 'MSFT', 'GOOGL', 'TSLA', 'META', 'NVDA', 'AMZN', 'SPY']
+            if ticker.upper() in popular_tickers:
+                if "Too Many Requests" in str(error_msg) or "rate limit" in str(error_msg).lower() or "429" in str(error_msg):
+                    return jsonify({
+                        'success': False,
+                        'error': f'🚫 Yahoo Finance is rate-limited right now.\n\n🎯 QUICK FIX:\n• Try "{ticker}-DEMO" to see how {ticker} analysis would look\n• Or use "DEMO" for full testing\n\n⚡ Real {ticker} data works great on the live deployment!',
+                        'suggested_demo': f'{ticker}-DEMO'
+                    })
+            
+            if "Too Many Requests" in str(error_msg) or "rate limit" in str(error_msg).lower() or "429" in str(error_msg):
                 return jsonify({
                     'success': False,
-                    'error': f'Yahoo Finance is currently rate limiting requests. Please wait a moment and try again. You can try "DEMO" as ticker for testing. (Ticker: {ticker})'
+                    'error': f'🚫 Yahoo Finance is temporarily busy (rate limited). Try these options:\n\n✅ Use "DEMO" ticker for full testing\n✅ Try again in 1-2 minutes\n✅ Use budget-only mode for stock suggestions\n\nThe live deployment won\'t have this issue!'
                 })
             else:
                 return jsonify({
                     'success': False,
-                    'error': f'Unable to fetch sufficient data for {ticker}. This could be due to an invalid ticker symbol or temporary API issues. Please verify the symbol and try again later. You can try "DEMO" as ticker for testing.'
+                    'error': f'📊 Market data temporarily unavailable for {ticker}.\n\n🎯 Try these instead:\n• "DEMO" - Full featured testing\n• "TEST" - Alternative demo mode\n• Leave ticker empty and use budget for suggestions\n\nReal tickers work better on the live deployment!'
                 })
         
         # Get current price
