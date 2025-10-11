@@ -287,7 +287,19 @@
                 
             } catch (error) {
                 hideLoading();
-                showError('Network error. Please check your connection and try again.');
+                console.error('Fetch error details:', error);
+                console.error('Current URL:', window.location.href);
+                console.error('API URL being called:', '/api/analyze');
+                
+                // More specific error message
+                let errorMsg = 'Network error. ';
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    errorMsg += 'Cannot connect to the server. Make sure the app is running.';
+                } else {
+                    errorMsg += 'Please check your connection and try again.';
+                }
+                
+                showError(errorMsg);
                 console.error('Error:', error);
             }
         });

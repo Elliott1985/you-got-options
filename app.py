@@ -363,6 +363,17 @@ def analyze_stock():
 def health_check():
     return jsonify({'status': 'healthy', 'timestamp': datetime.now().isoformat()})
 
+@app.route('/api/test', methods=['GET', 'POST'])
+def test_endpoint():
+    """Simple test endpoint for debugging"""
+    return jsonify({
+        'success': True,
+        'message': 'API is working!',
+        'method': request.method,
+        'timestamp': datetime.now().isoformat(),
+        'environment': 'production' if os.environ.get('FLASK_ENV') == 'production' else 'development'
+    })
+
 @app.route('/api/market-status')
 def market_status():
     """Get current market status"""
