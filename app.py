@@ -224,6 +224,12 @@ def analyze_stock():
                 'error': 'Please provide a stock ticker symbol'
             })
         
+        # Check for demo tickers BEFORE trying to fetch real data
+        if ticker.upper() in ['DEMO', 'TEST'] or '-DEMO' in ticker.upper():
+            # Extract the base ticker if it's in format like "AAPL-DEMO"
+            base_ticker = ticker.upper().replace('-DEMO', '') if '-DEMO' in ticker.upper() else ticker
+            return get_demo_analysis_for_ticker(base_ticker, budget)
+        
         # Fetch stock data (6 months with retry logic)
         end_date = datetime.now()
         start_date = end_date - timedelta(days=180)
