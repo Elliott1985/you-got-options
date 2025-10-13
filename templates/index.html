@@ -6,7 +6,7 @@
     <title>You Got Options - Professional Trading Platform</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js\"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -620,7 +620,11 @@
                 priceChart.destroy();
             }
             
-            const dates = chartData.map(d => d.date);
+            const dates = chartData.map(d => {
+                // Convert date string to readable format
+                const date = new Date(d.date);
+                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            });
             const prices = chartData.map(d => d.close);
             const rsiData = chartData.map(d => d.rsi).filter(r => r !== null);
             const macdData = chartData.map(d => d.macd).filter(m => m !== null);
@@ -680,14 +684,11 @@
                     },
                     scales: {
                         x: {
-                            type: 'time',
-                            time: {
-                                unit: 'day',
-                                displayFormats: {
-                                    day: 'MMM dd'
-                                }
+                            type: 'category',
+                            ticks: { 
+                                color: '#ffffff',
+                                maxTicksLimit: 10
                             },
-                            ticks: { color: '#ffffff' },
                             grid: { color: 'rgba(255, 255, 255, 0.1)' }
                         },
                         y: {
