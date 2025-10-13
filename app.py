@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, jsonify, session
 from flask_cors import CORS
+from flask_socketio import SocketIO, emit
 import yfinance as yf
 import pandas as pd
 from datetime import datetime, timedelta
@@ -7,15 +8,30 @@ from strategy_bot import (
     calculate_rsi, calculate_macd, get_trading_recommendation, 
     get_popular_tickers_by_budget, get_market_status, analyze_for_exit_signal
 )
+from market_data import MarketDataEngine
+from trade_monitor import TradeMonitor
 import json
 import os
+import threading
+import time
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-change-this-in-production')
 
-# In-memory storage for active trades (in production, use a database)
-active_trades = {}
+# Initialize SocketIO for real-time updates
+socketio = SocketIO(app, cors_allowed_origins="*")
+
+# Initialize market data engine and trade monitor
+market_engine = MarketDataEngine()
+trade_monitor = TradeMonitor(market_engine)
+
+# Global cache for pre-market data (refreshed every 5 minutes)
+pre_market_cache = {
+    'data': None,
+    'last_updated': None,
+    'cache_duration': 300  # 5 minutes
+}
 
 def get_demo_analysis(ticker, budget):
     """Return demo analysis data for testing when Yahoo Finance is unavailable"""
@@ -616,8 +632,383 @@ def get_demo_stock_data():
         'hist_data': pd.DataFrame({'Close': prices})
     }
 
+# New Advanced Trading Endpoints
+
+@app.route('/api/pre-market-analysis')
+def pre_market_analysis():
+    """Get pre-market analysis and watchlist"""
+    try:
+        # Check if it's pre-market hours
+        market_status = market_engine.get_market_status()
+        
+        # Check cache first
+        now = datetime.now()
+        if (pre_market_cache['data'] and pre_market_cache['last_updated'] and
+            (now - pre_market_cache['last_updated']).seconds < pre_market_cache['cache_duration']):
+            return jsonify({
+                'success': True,
+                'cached': True,
+                'market_status': market_status,
+                **pre_market_cache['data']
+            })
+        
+        # Get fresh pre-market data
+        watchlist = market_engine.scan_top_movers(limit=30)
+        
+        # Generate options recommendations for top picks
+        recommendations = []
+        for stock in watchlist[:5]:  # Top 5 stocks
+            options_rec = market_engine.generate_options_recommendation(
+                stock['symbol'], 
+                stock['current_price'],
+                stock['technical'],
+                budget=None  # Will be applied on frontend
+            )
+            
+            if options_rec:
+                recommendations.append({
+                    **stock,
+                    'options': options_rec
+                })
+        
+        # Cache the results
+        cache_data = {
+            'watchlist': watchlist,
+            'recommendations': recommendations,
+            'scan_time': now.isoformat()
+        }
+        pre_market_cache['data'] = cache_data
+        pre_market_cache['last_updated'] = now
+        
+        return jsonify({
+            'success': True,
+            'cached': False,
+            'market_status': market_status,
+            **cache_data
+        })
+        
+    except Exception as e:
+        print(f"Pre-market analysis error: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Pre-market analysis unavailable: {str(e)}'
+        })
+
+@app.route('/api/daily-trade-finder', methods=['POST'])
+def daily_trade_finder():
+    """Find daily trading opportunities based on ticker and/or budget"""
+    try:
+        data = request.get_json() or {}
+        ticker = data.get('ticker', '').upper().strip()
+        budget = data.get('budget')
+        
+        if budget:
+            try:
+                budget = float(budget)
+            except (ValueError, TypeError):
+                budget = None
+        
+        if ticker:
+            # Analyze specific ticker
+            # Get stock data
+            stock_data = yf.Ticker(ticker)
+            hist = stock_data.history(period='60d')
+            
+            if hist.empty:
+                return jsonify({
+                    'success': False,
+                    'error': f'No data available for {ticker}'
+                })
+            
+            current_price = hist['Close'].iloc[-1]
+            
+            # Get technical analysis
+            technical = market_engine.analyze_technical_setup(ticker)
+            if not technical:
+                return jsonify({
+                    'success': False,
+                    'error': f'Technical analysis failed for {ticker}'
+                })
+            
+            # Generate options recommendation
+            options_rec = market_engine.generate_options_recommendation(
+                ticker, current_price, technical, budget
+            )
+            
+            # Get news sentiment
+            sentiment = market_engine.get_news_sentiment(ticker)
+            
+            return jsonify({
+                'success': True,
+                'analysis_type': 'specific_ticker',
+                'ticker': ticker,
+                'current_price': round(current_price, 2),
+                'technical': technical,
+                'sentiment': sentiment,
+                'options_recommendation': options_rec,
+                'analysis_time': datetime.now().isoformat()
+            })
+        
+        else:
+            # Suggest top trading opportunities
+            opportunities = market_engine.scan_top_movers(limit=15)
+            
+            # Filter and enhance with options recommendations
+            enhanced_opportunities = []
+            for stock in opportunities[:5]:  # Top 5
+                options_rec = market_engine.generate_options_recommendation(
+                    stock['symbol'],
+                    stock['current_price'],
+                    stock['technical'],
+                    budget
+                )
+                
+                if options_rec:
+                    enhanced_opportunities.append({
+                        **stock,
+                        'options_recommendation': options_rec
+                    })
+            
+            return jsonify({
+                'success': True,
+                'analysis_type': 'market_scan',
+                'opportunities': enhanced_opportunities,
+                'budget_filter': budget,
+                'scan_time': datetime.now().isoformat()
+            })
+        
+    except Exception as e:
+        print(f"Daily trade finder error: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Trade finder unavailable: {str(e)}'
+        })
+
+@app.route('/api/start-trade-monitoring', methods=['POST'])
+def start_trade_monitoring():
+    """Start monitoring a new trade"""
+    try:
+        data = request.get_json()
+        
+        symbol = data.get('symbol', '').upper().strip()
+        option_type = data.get('option_type', 'STOCK').upper()
+        entry_price = float(data.get('entry_price', 0))
+        contracts = int(data.get('contracts', 1))
+        strike_price = data.get('strike_price')
+        expiration_date = data.get('expiration_date')
+        stop_loss = data.get('stop_loss')
+        take_profit = data.get('take_profit')
+        user_email = data.get('user_email')
+        
+        if not symbol or entry_price <= 0:
+            return jsonify({
+                'success': False,
+                'error': 'Symbol and entry price are required'
+            })
+        
+        # Convert string values to float if provided
+        if strike_price:
+            strike_price = float(strike_price)
+        if stop_loss:
+            stop_loss = float(stop_loss)
+        if take_profit:
+            take_profit = float(take_profit)
+        
+        # Add trade to monitor
+        trade_id = trade_monitor.add_trade(
+            symbol=symbol,
+            option_type=option_type,
+            entry_price=entry_price,
+            contracts=contracts,
+            strike_price=strike_price,
+            expiration_date=expiration_date,
+            stop_loss=stop_loss,
+            take_profit=take_profit,
+            user_email=user_email
+        )
+        
+        # Store in session
+        if 'monitored_trades' not in session:
+            session['monitored_trades'] = []
+        session['monitored_trades'].append(trade_id)
+        session.modified = True
+        
+        return jsonify({
+            'success': True,
+            'trade_id': trade_id,
+            'message': f'Started monitoring {option_type} position in {symbol}'
+        })
+        
+    except Exception as e:
+        print(f"Start trade monitoring error: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to start monitoring: {str(e)}'
+        })
+
+@app.route('/api/trade-status/<trade_id>')
+def get_trade_status(trade_id):
+    """Get current status of a monitored trade"""
+    try:
+        trade_status = trade_monitor.get_trade_status(trade_id)
+        
+        if not trade_status:
+            return jsonify({
+                'success': False,
+                'error': 'Trade not found'
+            })
+        
+        return jsonify({
+            'success': True,
+            **trade_status
+        })
+        
+    except Exception as e:
+        print(f"Get trade status error: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to get trade status: {str(e)}'
+        })
+
+@app.route('/api/stop-trade-monitoring/<trade_id>', methods=['POST'])
+def stop_trade_monitoring(trade_id):
+    """Stop monitoring a trade"""
+    try:
+        data = request.get_json() or {}
+        close_price = data.get('close_price')
+        
+        if close_price:
+            close_price = float(close_price)
+        
+        success = trade_monitor.remove_trade(trade_id, close_price)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Trade monitoring stopped'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Trade not found'
+            })
+        
+    except Exception as e:
+        print(f"Stop trade monitoring error: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to stop monitoring: {str(e)}'
+        })
+
+@app.route('/api/portfolio-summary')
+def get_portfolio_summary():
+    """Get overall portfolio performance"""
+    try:
+        summary = trade_monitor.get_portfolio_summary()
+        active_trades = trade_monitor.get_all_active_trades()
+        
+        return jsonify({
+            'success': True,
+            'summary': summary,
+            'active_trades': active_trades
+        })
+        
+    except Exception as e:
+        print(f"Portfolio summary error: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to get portfolio summary: {str(e)}'
+        })
+
+@app.route('/api/enhanced-market-status')
+def enhanced_market_status():
+    """Get enhanced market status with recommendations"""
+    try:
+        status = market_engine.get_market_status()
+        
+        # Add contextual information
+        context = {
+            'recommended_action': 'monitor',
+            'interface_mode': 'closed'
+        }
+        
+        if status['is_pre_market']:
+            context['recommended_action'] = 'analyze_pre_market'
+            context['interface_mode'] = 'pre_market'
+        elif status['is_open']:
+            context['recommended_action'] = 'active_trading'
+            context['interface_mode'] = 'live_trading'
+        else:
+            context['recommended_action'] = 'plan_trades'
+            context['interface_mode'] = 'after_hours'
+        
+        return jsonify({
+            'success': True,
+            'market_status': status,
+            'context': context
+        })
+        
+    except Exception as e:
+        print(f"Enhanced market status error: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Market status unavailable: {str(e)}'
+        })
+
+# WebSocket events for real-time updates
+@socketio.on('connect')
+def handle_connect():
+    print('Client connected')
+    # Send initial market status
+    try:
+        status = market_engine.get_market_status()
+        emit('market_status_update', status)
+    except Exception as e:
+        print(f"Error sending initial market status: {e}")
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    print('Client disconnected')
+
+@socketio.on('subscribe_trade_updates')
+def handle_trade_subscription(data):
+    """Subscribe to real-time trade updates"""
+    try:
+        trade_id = data.get('trade_id')
+        if trade_id:
+            # Send current trade status
+            trade_status = trade_monitor.get_trade_status(trade_id)
+            if trade_status:
+                emit('trade_update', trade_status)
+    except Exception as e:
+        print(f"Error handling trade subscription: {e}")
+
+# Background task for real-time updates
+def background_updates():
+    """Background task to send real-time updates via WebSocket"""
+    while True:
+        try:
+            if market_engine.is_market_open():
+                # Send trade updates to all connected clients
+                active_trades = trade_monitor.get_all_active_trades()
+                for trade in active_trades:
+                    socketio.emit('trade_update', trade)
+                
+                # Send market status update
+                status = market_engine.get_market_status()
+                socketio.emit('market_status_update', status)
+            
+            time.sleep(30)  # Update every 30 seconds
+        except Exception as e:
+            print(f"Background update error: {e}")
+            time.sleep(30)
+
+# Start background task
+background_thread = threading.Thread(target=background_updates, daemon=True)
+background_thread.start()
+
 if __name__ == '__main__':
     import os
     port = int(os.environ.get('PORT', 5001))
     debug = os.environ.get('FLASK_ENV') != 'production'
-    app.run(debug=debug, host='0.0.0.0', port=port)
+    socketio.run(app, debug=debug, host='0.0.0.0', port=port)

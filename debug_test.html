@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Debug Test</title>
+</head>
+<body>
+    <h1>API Debug Test</h1>
+    <button onclick="testAPI()">Test API Call</button>
+    <div id="result"></div>
+
+    <script>
+        async function testAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing API call...';
+            
+            try {
+                console.log('Making API request to:', window.location.origin + '/api/analyze');
+                
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        ticker: 'DEMO',
+                        budget: null
+                    })
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                resultDiv.innerHTML = `
+                    <h3>Success!</h3>
+                    <p>Ticker: ${data.ticker}</p>
+                    <p>Current Price: $${data.current_price}</p>
+                    <p>RSI: ${data.current_rsi}</p>
+                    <p>Recommendation: ${data.recommendation.action}</p>
+                `;
+                
+            } catch (error) {
+                console.error('Detailed error:', error);
+                console.error('Error name:', error.name);
+                console.error('Error message:', error.message);
+                console.error('Current URL:', window.location.href);
+                
+                resultDiv.innerHTML = `
+                    <h3>Error!</h3>
+                    <p>Error: ${error.message}</p>
+                    <p>Type: ${error.name}</p>
+                    <p>URL: ${window.location.href}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>You Got Options - Professional Trading Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1 class="title">YOU GOT OPTIONS</h1>
+            <p class="subtitle">Professional RSI & MACD Trading Platform</p>
+            <div id="marketStatus" class="market-status">
+                <span id="marketStatusText">Market Status Loading...</span>
+            </div>
+            <div class="accent-line"></div>
+        </header>
+
+        <!-- Input Section -->
+        <section class="input-section">
+            <div class="input-card">
+                <h2>Market Analysis</h2>
+                <form id="analysisForm" class="form">
+                    <div class="input-group">
+                        <label for="ticker">Stock Ticker (Optional)</label>
+                        <input type="text" id="ticker" name="ticker" placeholder="e.g., AAPL, TSLA" maxlength="10">
+                        <small>Leave empty to get suggestions based on budget</small>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="budget">Budget (Optional)</label>
+                        <input type="number" id="budget" name="budget" placeholder="e.g., 1000" min="1" step="0.01">
+                        <small>Enter your available trading budget in USD</small>
+                    </div>
+                    
+                    <button type="submit" class="analyze-btn" id="analyzeBtn">
+                        ANALYZE
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Loading Section -->
+        <div id="loadingSection" class="loading-section hidden">
+            <div class="loading-spinner"></div>
+            <p>Analyzing market data...</p>
+        </div>
+
+        <!-- Results Section -->
+        <section id="resultsSection" class="results-section hidden">
+            <!-- Stock Info Card -->
+            <div class="result-card" id="stockInfoCard">
+                <h3 id="stockTitle">Stock Analysis</h3>
+                <div class="stock-info">
+                    <div class="info-item">
+                        <span class="label">Current Price:</span>
+                        <span class="value" id="currentPrice">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">RSI Value:</span>
+                        <span class="value" id="rsiValue">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">MACD Trend:</span>
+                        <span class="value" id="macdTrend">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Analysis Date:</span>
+                        <span class="value" id="analysisDate">-</span>
+                    </div>
+                </div>
+
+                <!-- Trade Entry Section -->
+                <div id="tradeEntrySection" class="trade-entry-section" style="display: none;">
+                    <h4>Enter Trade</h4>
+                    <div class="form">
+                        <div class="input-group">
+                            <label for="entryPrice">Entry Price</label>
+                            <input type="number" id="entryPrice" step="0.01" min="0" placeholder="Current market price">
+                        </div>
+                        <div class="input-group">
+                            <label for="alertEmail">Email for Alerts (Optional)</label>
+                            <input type="email" id="alertEmail" placeholder="your@email.com">
+                            <small>Get notifications when exit signals are triggered</small>
+                        </div>
+                        <button type="button" class="trade-btn enter-trade" onclick="enterTrade()">
+                            START TRACKING
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recommendation Card -->
+            <div class="result-card" id="recommendationCard">
+                <h3>Trading Recommendation</h3>
+                <div class="recommendation">
+                    <div class="action" id="actionText">-</div>
+                    <div class="signal" id="signalText">-</div>
+                    <div class="reason" id="reasonText">-</div>
+                    <div class="strength" id="strengthText">-</div>
+                </div>
+            </div>
+
+            <!-- Budget Analysis Card -->
+            <div class="result-card" id="budgetCard" style="display: none;">
+                <h3>Budget Analysis</h3>
+                <div class="budget-info">
+                    <div class="info-item">
+                        <span class="label">Max Shares:</span>
+                        <span class="value" id="maxShares">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Total Cost:</span>
+                        <span class="value" id="totalCost">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Remaining Budget:</span>
+                        <span class="value" id="remainingBudget">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart Section -->
+            <div class="chart-card">
+                <h3>Price, RSI & MACD Chart (Last 90 Days)</h3>
+                <div class="chart-container">
+                    <canvas id="priceChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Active Trades Section -->
+        <section id="activeTradesSection" class="trade-section hidden">
+            <div class="result-card">
+                <h3>Active Trades</h3>
+                <div id="activeTradesList">
+                    <!-- Active trades will be populated here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Trade Monitoring Section -->
+        <section id="tradeMonitorSection" class="trade-section hidden">
+            <div id="tradeMonitorCards">
+                <!-- Trade monitoring cards will be populated here -->
+            </div>
+        </section>
+
+        <!-- Suggestions Section -->
+        <section id="suggestionsSection" class="suggestions-section hidden">
+            <div class="result-card">
+                <h3 id="suggestionsTitle">Stock Suggestions</h3>
+                <p id="suggestionsMessage"></p>
+                <div class="suggestions-grid" id="suggestionsGrid">
+                    <!-- Suggestions will be populated by JavaScript -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Error Section -->
+        <div id="errorSection" class="error-section hidden">
+            <div class="error-card">
+                <h3>⚠️ Error</h3>
+                <p id="errorMessage">Something went wrong. Please try again.</p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>⚠️ <strong>Disclaimer:</strong> This is for educational purposes only. Not financial advice. Trade at your own risk.</p>
+            <p class="future-feature">🚀 Real-time trade monitoring and alerts now available!</p>
+        </footer>
+    </div>
+
+    <script>
+        let priceChart = null;
+        let currentAnalysisData = null;
+        let tradeMonitoringInterval = null;
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadMarketStatus();
+            loadActiveTradesSection();
+            loadTradeMonitoring();
+        });
+
+        // Load market status
+        async function loadMarketStatus() {
+            try {
+                const response = await fetch('/api/market-status');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const statusElement = document.getElementById('marketStatusText');
+                    const statusContainer = document.getElementById('marketStatus');
+                    
+                    statusElement.textContent = data.message;
+                    statusContainer.className = `market-status ${data.status.toLowerCase()}`;
+                }
+            } catch (error) {
+                console.log('Market status unavailable:', error);
+            }
+        }
+
+        // Load active trades section
+        async function loadActiveTradesSection() {
+            try {
+                const response = await fetch('/api/user-trades');
+                const data = await response.json();
+                
+                if (data.success && data.trades.length > 0) {
+                    document.getElementById('activeTradesSection').classList.remove('hidden');
+                    displayActiveTrades(data.trades);
+                }
+            } catch (error) {
+                console.log('Error loading trades:', error);
+            }
+        }
+
+        // Display active trades
+        function displayActiveTrades(trades) {
+            const container = document.getElementById('activeTradesList');
+            container.innerHTML = '';
+
+            trades.forEach(trade => {
+                if (trade.status === 'ACTIVE') {
+                    const tradeElement = document.createElement('div');
+                    tradeElement.className = 'info-item';
+                    tradeElement.innerHTML = `
+                        <span class="label">${trade.ticker} (Entry: $${trade.entry_price})</span>
+                        <span class="value">
+                            <button class="trade-btn" onclick="viewTradeDetails('${trade.trade_id}')">View</button>
+                            <button class="trade-btn stop-tracking" onclick="stopTracking('${trade.trade_id}')">Stop</button>
+                        </span>
+                    `;
+                    container.appendChild(tradeElement);
+                }
+            });
+        }
+
+        // Form submission handler
+        document.getElementById('analysisForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const ticker = document.getElementById('ticker').value.trim().toUpperCase();
+            const budget = document.getElementById('budget').value;
+            
+            // Validate input
+            if (!ticker && !budget) {
+                showError('Please provide either a stock ticker or a budget amount.');
+                return;
+            }
+            
+            showLoading();
+            hideAllSections();
+            
+            try {
+                console.log('🚀 Starting API request to /api/analyze');
+                console.log('📝 Request data:', { ticker, budget });
+                
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        ticker: ticker,
+                        budget: budget ? parseFloat(budget) : null
+                    })
+                });
+                
+                console.log('✅ Response received:');
+                console.log('Status:', response.status);
+                console.log('Status Text:', response.statusText);
+                console.log('OK:', response.ok);
+                console.log('Headers:', response.headers);
+                
+                if (!response.ok) {
+                    console.error('❌ Response not OK, status:', response.status);
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                console.log('📊 Parsing JSON response...');
+                const data = await response.json();
+                console.log('✨ JSON parsed successfully:', data);
+                
+                hideLoading();
+                
+                if (data.success) {
+                    if (data.suggestions) {
+                        showSuggestions(data);
+                    } else {
+                        currentAnalysisData = data;
+                        showResults(data);
+                    }
+                } else {
+                    showError(data.error || 'Analysis failed. Please try again.');
+                }
+                
+            } catch (error) {
+                hideLoading();
+                console.error('🚨 ERROR DETAILS:');
+                console.error('Error type:', error.constructor.name);
+                console.error('Error name:', error.name);
+                console.error('Error message:', error.message);
+                console.error('Error stack:', error.stack);
+                console.error('Current URL:', window.location.href);
+                console.error('API URL being called:', '/api/analyze');
+                
+                // More specific error message
+                let errorMsg = 'Network error. ';
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    errorMsg += 'Cannot connect to the server. Make sure the app is running.';
+                } else if (error.name === 'SyntaxError') {
+                    errorMsg += 'Server returned invalid response format.';
+                    console.error('🔍 This might be a JSON parsing error - check server response format');
+                } else {
+                    errorMsg += `Error: ${error.message}`;
+                }
+                
+                showError(errorMsg);
+            }
+        });
+
+        function showLoading() {
+            document.getElementById('loadingSection').classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingSection').classList.add('hidden');
+        }
+
+        function hideAllSections() {
+            document.getElementById('resultsSection').classList.add('hidden');
+            document.getElementById('suggestionsSection').classList.add('hidden');
+            document.getElementById('errorSection').classList.add('hidden');
+        }
+
+        function showResults(data) {
+            // Update stock info
+            document.getElementById('stockTitle').textContent = `${data.company_name} (${data.ticker})`;
+            document.getElementById('currentPrice').textContent = `$${data.current_price}`;
+            document.getElementById('rsiValue').textContent = data.current_rsi.toFixed(2);
+            document.getElementById('macdTrend').textContent = data.recommendation.macd_trend || 'N/A';
+            document.getElementById('analysisDate').textContent = data.analysis_date;
+
+            // Update recommendation
+            const rec = data.recommendation;
+            document.getElementById('actionText').textContent = rec.action;
+            document.getElementById('actionText').style.color = rec.color;
+            document.getElementById('signalText').textContent = `${rec.signal} (${rec.strength})`;
+            document.getElementById('reasonText').textContent = rec.reason;
+            document.getElementById('strengthText').textContent = rec.strength;
+
+            // Update budget info if available
+            if (data.shares_info && Object.keys(data.shares_info).length > 0) {
+                document.getElementById('budgetCard').style.display = 'block';
+                document.getElementById('maxShares').textContent = data.shares_info.max_shares;
+                document.getElementById('totalCost').textContent = `$${data.shares_info.total_cost.toFixed(2)}`;
+                document.getElementById('remainingBudget').textContent = `$${data.shares_info.remaining_budget.toFixed(2)}`;
+            }
+
+            // Show trade entry section
+            document.getElementById('tradeEntrySection').style.display = 'block';
+            document.getElementById('entryPrice').value = data.current_price;
+
+            // Update chart
+            updateChart(data.chart_data);
+
+            document.getElementById('resultsSection').classList.remove('hidden');
+        }
+
+        function showSuggestions(data) {
+            document.getElementById('suggestionsMessage').textContent = data.message;
+            
+            const grid = document.getElementById('suggestionsGrid');
+            grid.innerHTML = '';
+            
+            data.suggestions.forEach(stock => {
+                const card = document.createElement('div');
+                card.className = 'suggestion-card';
+                
+                const noteHtml = stock.note ? `<p><em>${stock.note}</em></p>` : '';
+                
+                card.innerHTML = `
+                    <h4>${stock.ticker}</h4>
+                    <p class="company-name">${stock.name}</p>
+                    <div class="stock-details">
+                        <p><strong>Price:</strong> $${stock.price}</p>
+                        <p><strong>Max Shares:</strong> ${stock.max_shares}</p>
+                        <p><strong>Total Cost:</strong> $${stock.total_cost}</p>
+                        ${noteHtml}
+                    </div>
+                    <button class="select-stock-btn" onclick="selectStock('${stock.ticker}')">
+                        Analyze This Stock
+                    </button>
+                `;
+                grid.appendChild(card);
+            });
+            
+            document.getElementById('suggestionsSection').classList.remove('hidden');
+        }
+
+        function selectStock(ticker) {
+            document.getElementById('ticker').value = ticker;
+            document.getElementById('analysisForm').dispatchEvent(new Event('submit'));
+        }
+
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorSection').classList.remove('hidden');
+        }
+
+        // Trade Management Functions
+        async function enterTrade() {
+            if (!currentAnalysisData) {
+                showError('Please analyze a stock first before entering a trade.');
+                return;
+            }
+
+            const entryPrice = parseFloat(document.getElementById('entryPrice').value);
+            const email = document.getElementById('alertEmail').value.trim();
+
+            if (!entryPrice || entryPrice <= 0) {
+                showError('Please enter a valid entry price.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/enter-trade', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        ticker: currentAnalysisData.ticker,
+                        entry_price: entryPrice,
+                        email: email
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert(data.message);
+                    loadActiveTradesSection();
+                    loadTradeMonitoring();
+                } else {
+                    showError(data.error);
+                }
+
+            } catch (error) {
+                showError('Error entering trade: ' + error.message);
+            }
+        }
+
+        async function stopTracking(tradeId) {
+            if (!confirm('Are you sure you want to stop tracking this trade?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/stop-tracking/${tradeId}`, {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert(data.message);
+                    loadActiveTradesSection();
+                    loadTradeMonitoring();
+                } else {
+                    showError(data.error);
+                }
+
+            } catch (error) {
+                showError('Error stopping trade: ' + error.message);
+            }
+        }
+
+        // Trade monitoring
+        function loadTradeMonitoring() {
+            // Clear existing interval
+            if (tradeMonitoringInterval) {
+                clearInterval(tradeMonitoringInterval);
+            }
+
+            // Check for active trades and start monitoring
+            checkActiveTradesAndStartMonitoring();
+        }
+
+        async function checkActiveTradesAndStartMonitoring() {
+            try {
+                const response = await fetch('/api/user-trades');
+                const data = await response.json();
+
+                if (data.success && data.trades.length > 0) {
+                    const activeTrades = data.trades.filter(trade => trade.status === 'ACTIVE');
+                    
+                    if (activeTrades.length > 0) {
+                        document.getElementById('tradeMonitorSection').classList.remove('hidden');
+                        
+                        // Update monitoring displays for each active trade
+                        activeTrades.forEach(trade => {
+                            updateTradeMonitorDisplay(trade.trade_id);
+                        });
+
+                        // Start monitoring interval (check every 30 seconds)
+                        tradeMonitoringInterval = setInterval(() => {
+                            activeTrades.forEach(trade => {
+                                updateTradeMonitorDisplay(trade.trade_id);
+                            });
+                        }, 30000);
+                    } else {
+                        document.getElementById('tradeMonitorSection').classList.add('hidden');
+                    }
+                }
+            } catch (error) {
+                console.log('Error checking active trades:', error);
+            }
+        }
+
+        async function updateTradeMonitorDisplay(tradeId) {
+            try {
+                const response = await fetch(`/api/track-trade/${tradeId}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    displayTradeMonitorCard(data);
+                    
+                    // Check for high-priority alerts
+                    if (data.analysis.alert_level === 'HIGH') {
+                        showTradeAlert(data);
+                    }
+                }
+            } catch (error) {
+                console.log('Error tracking trade:', error);
+            }
+        }
+
+        function displayTradeMonitorCard(tradeData) {
+            const container = document.getElementById('tradeMonitorCards');
+            let existingCard = document.getElementById(`trade-card-${tradeData.trade_id}`);
+
+            const pnlClass = tradeData.pnl.percent >= 0 ? 'pnl-positive' : 'pnl-negative';
+            const pnlSign = tradeData.pnl.percent >= 0 ? '+' : '';
+
+            const cardHtml = `
+                <div class="trade-card tracking" id="trade-card-${tradeData.trade_id}">
+                    <div class="trade-header">
+                        <div>
+                            <h4>${tradeData.ticker}</h4>
+                            <span class="trade-status monitoring">● MONITORING</span>
+                        </div>
+                        <div class="${pnlClass}">
+                            ${pnlSign}${tradeData.pnl.percent.toFixed(2)}% (${pnlSign}$${tradeData.pnl.dollar.toFixed(2)})
+                        </div>
+                    </div>
+                    <div class="trade-info">
+                        <div class="info-item">
+                            <span class="label">Entry Price:</span>
+                            <span class="value">$${tradeData.entry_price.toFixed(2)}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">Current Price:</span>
+                            <span class="value">$${tradeData.current_price.toFixed(2)}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">RSI:</span>
+                            <span class="value">${tradeData.rsi.toFixed(2)}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">Signal:</span>
+                            <span class="value" style="color: ${tradeData.analysis.color}">${tradeData.analysis.action}</span>
+                        </div>
+                    </div>
+                    ${tradeData.analysis.alert_level === 'HIGH' ? `
+                        <div class="alert alert-danger">
+                            🚨 ${tradeData.analysis.alert_message}
+                        </div>
+                    ` : tradeData.analysis.alert_level === 'MEDIUM' ? `
+                        <div class="alert alert-warning">
+                            ⚠️ ${tradeData.analysis.alert_message}
+                        </div>
+                    ` : ''}
+                    <div style="margin-top: 15px;">
+                        <button class="trade-btn stop-tracking" onclick="stopTracking('${tradeData.trade_id}')">
+                            Stop Tracking
+                        </button>
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 10px;">
+                        Last updated: ${new Date(tradeData.last_updated).toLocaleString()}
+                    </div>
+                </div>
+            `;
+
+            if (existingCard) {
+                existingCard.outerHTML = cardHtml;
+            } else {
+                container.insertAdjacentHTML('beforeend', cardHtml);
+            }
+        }
+
+        function showTradeAlert(tradeData) {
+            // Create a more prominent alert for high-priority signals
+            if (confirm(`🚨 TRADING ALERT 🚨\n\n${tradeData.analysis.alert_message}\n\nWould you like to stop tracking this trade?`)) {
+                stopTracking(tradeData.trade_id);
+            }
+        }
+
+        function updateChart(chartData) {
+            const ctx = document.getElementById('priceChart').getContext('2d');
+            
+            if (priceChart) {
+                priceChart.destroy();
+            }
+            
+            const dates = chartData.map(d => {
+                // Convert date string to readable format
+                const date = new Date(d.date);
+                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            });
+            const prices = chartData.map(d => d.close);
+            const rsiData = chartData.map(d => d.rsi).filter(r => r !== null);
+            const macdData = chartData.map(d => d.macd).filter(m => m !== null);
+            const macdSignalData = chartData.map(d => d.macd_signal).filter(s => s !== null);
+            
+            priceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [
+                        {
+                            label: 'Close Price ($)',
+                            data: prices,
+                            borderColor: '#00ffcc',
+                            backgroundColor: 'rgba(0, 255, 204, 0.1)',
+                            borderWidth: 2,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'RSI',
+                            data: rsiData,
+                            borderColor: '#ffaa00',
+                            backgroundColor: 'rgba(255, 170, 0, 0.1)',
+                            borderWidth: 2,
+                            yAxisID: 'y1'
+                        },
+                        {
+                            label: 'MACD',
+                            data: macdData,
+                            borderColor: '#00ff88',
+                            backgroundColor: 'rgba(0, 255, 136, 0.1)',
+                            borderWidth: 2,
+                            yAxisID: 'y2'
+                        },
+                        {
+                            label: 'MACD Signal',
+                            data: macdSignalData,
+                            borderColor: '#ff4444',
+                            backgroundColor: 'rgba(255, 68, 68, 0.1)',
+                            borderWidth: 1,
+                            yAxisID: 'y2'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#ffffff'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'category',
+                            ticks: { 
+                                color: '#ffffff',
+                                maxTicksLimit: 10
+                            },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            ticks: { color: '#00ffcc' },
+                            grid: { color: 'rgba(0, 255, 204, 0.1)' }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            min: 0,
+                            max: 100,
+                            ticks: { color: '#ffaa00' },
+                            grid: { drawOnChartArea: false }
+                        },
+                        y2: {
+                            type: 'linear',
+                            display: false,
+                            ticks: { color: '#00ff88' }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
