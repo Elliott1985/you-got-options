@@ -698,6 +698,148 @@
             console.log('Loading active trades for monitor...');
         }
         
+        // Missing functions implementation
+        async function loadLiveTradingData() {
+            try {
+                showLoading('Finding live trading opportunities...');
+                
+                const response = await fetch('/api/daily-trade-finder', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({budget: 10000}) // Default budget for scanning
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayLiveOpportunities(data.opportunities || []);
+                } else {
+                    document.getElementById('liveOpportunities').innerHTML = 
+                        `<p class="no-data-message">Live opportunities unavailable: ${data.error}</p>`;
+                }
+                
+                hideLoading();
+            } catch (error) {
+                console.error('Live trading data error:', error);
+                document.getElementById('liveOpportunities').innerHTML = 
+                    '<p class="no-data-message">Unable to load live opportunities. Please try again later.</p>';
+                hideLoading();
+            }
+        }
+        
+        function displayLiveOpportunities(opportunities) {
+            const container = document.getElementById('liveOpportunities');
+            container.innerHTML = '';
+            
+            if (!opportunities || opportunities.length === 0) {
+                container.innerHTML = '<p class="no-data-message">No live trading opportunities found right now.</p>';
+                return;
+            }
+            
+            opportunities.slice(0, 6).forEach(stock => {
+                const card = createOpportunityCard(stock);
+                container.appendChild(card);
+            });
+        }
+        
+        function createOpportunityCard(stock) {
+            const card = document.createElement('div');
+            card.className = 'watchlist-card';
+            
+            const changeClass = stock.change_percent >= 0 ? 'positive' : 'negative';
+            const changeSymbol = stock.change_percent >= 0 ? '+' : '';
+            
+            let optionsHTML = '';
+            if (stock.options_recommendation) {
+                const opts = stock.options_recommendation;
+                optionsHTML = `
+                    <div class="options-recommendation">
+                        <div class="option-type">${opts.option_type}</div>
+                        <div class="option-details">
+                            Strike: $${opts.strike_price} | Exp: ${opts.expiration_date}
+                        </div>
+                        <div class="option-price">Est. Premium: $${opts.estimated_premium}</div>
+                        <div class="option-reasoning">${opts.reasoning}</div>
+                    </div>
+                `;
+            }
+            
+            card.innerHTML = `
+                <div class="stock-header">
+                    <div class="stock-symbol">${stock.symbol}</div>
+                    <div class="stock-price">$${stock.current_price}</div>
+                </div>
+                <div class="stock-change ${changeClass}">
+                    ${changeSymbol}${stock.change_percent ? stock.change_percent.toFixed(2) : '0.00'}%
+                </div>
+                <div class="technical-signals">
+                    RSI: ${stock.technical ? stock.technical.rsi : 'N/A'}
+                </div>
+                <div class="sentiment-indicator sentiment-${stock.sentiment ? stock.sentiment.sentiment : 'neutral'}">
+                    ${stock.sentiment ? stock.sentiment.sentiment.toUpperCase() : 'NEUTRAL'} sentiment
+                </div>
+                ${optionsHTML}
+                <button class="analyze-stock-btn" onclick="analyzeStock('${stock.symbol}')">
+                    Analyze ${stock.symbol}
+                </button>
+            `;
+            
+            return card;
+        }
+        
+        function updateNextOpenCountdown() {
+            // Simple countdown to next market open
+            const countdownElement = document.getElementById('nextOpenCountdown');
+            if (countdownElement) {
+                countdownElement.textContent = 'Market opens tomorrow at 9:30 AM ET';
+            }
+        }
+        
+        function analyzeStock(symbol) {
+            // Switch to analysis tab and analyze the stock
+            document.getElementById('analysisTickerInput').value = symbol;
+            switchTab('analysis');
+            performAdvancedAnalysis();
+        }
+        
+        function findTradingOpportunities() {
+            // Find general trading opportunities
+            document.getElementById('analysisTickerInput').value = '';
+            performAdvancedAnalysis();
+        }
+        
+        function analyzePopularStock(symbol) {
+            // Analyze a popular stock
+            document.getElementById('analysisTickerInput').value = symbol;
+            performAdvancedAnalysis();
+        }
+        
+        function refreshPreMarketData() {
+            loadPreMarketData();
+        }
+        
+        function findTodaysOpportunities() {
+            loadLiveTradingData();
+        }
+        
+        function loadMarketSummary() {
+            // Placeholder for market summary
+            showError('Market summary feature coming soon!');
+        }
+        
+        function updateMarketStatus(data) {
+            // Update market status from WebSocket
+            if (data) {
+                marketStatus = data;
+                // Update display elements
+            }
+        }
+        
+        function updateTradeDisplay(trade) {
+            // Update trade display from WebSocket
+            console.log('Trade update received:', trade);
+        }
+        
     </script>
 </body>
 </html>
