@@ -1,314 +1,241 @@
-# You Got Options – Real-Time Trading & Market Analysis Platform
-
+# 🎯 YOU GOT OPTIONS – Real-Time Trading & Market Analysis Platform
 A full-featured trading analysis prototype with dashboards, signal scanning, advanced analysis, and real-time monitoring. Features a neon-themed UI and interactive tools for exploring market opportunities.
 
-This project showcases front-end engineering, interactive UI design, Python/Flask integration (if using backend), live monitoring workflows, and AI-assisted development using ChatGPT + Warp.
+Live Demo:  
+👉 https://you-got-options.onrender.com
+
+Run locally at:  
+http://127.0.0.1:5000
 
 ---
 
-## 📋 Table of Contents
+## 🌟 Features
 
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Installation & Setup](#installation--setup)
-- [Usage](#usage)
-- [Dashboard Overview](#dashboard-overview)
-- [Contributing](#contributing)
-- [License](#license)
+### 📊 Real Market Dashboard
+View real-time market opportunity scans, trending signals, and actionable insights.
+
+### 🔍 Advanced Analysis Tools
+Input ticker symbols and an optional budget to analyze stock opportunities or generate trade logic.
+
+### 📈 Live Trade Monitor
+Customize:
+- Symbol  
+- Trade Type  
+- Entry Price  
+- Stop Loss  
+- Take Profit  
+- Contracts/Shares  
+- Alert Email  
+
+The system monitors live market movement in real time.
+
+### 🧭 Smooth Multi-Tab Navigation
+Tabs include:
+- Dashboard  
+- Analysis  
+- Live Monitor  
+- Portfolio  
+
+### ⚡ AI-Assisted Development
+Built using ChatGPT + Warp for rapid prototyping, refactoring, and feature enhancements.
 
 ---
 
-## ✨ Features
+## 🟩 Screenshots
 
-### Dashboard
-- **Real-time market overview** with key metrics and performance indicators
-- **Neon-themed UI** for modern, visually engaging interface
-- **Quick access panels** to core trading tools
-- **Customizable widgets** for personalized market views
+### Dashboard  
+![You Got Options Dashboard](static/screenshots/yougotoptions_dashboard.png)
 
-### Analysis Page
-- **Advanced technical analysis tools** for in-depth market research
-- **Interactive charting** with multiple timeframes
-- **Signal scanning** to identify trading opportunities
-- **Indicator overlays** (RSI, MACD, volume, candlestick trends)
-- **News sentiment integration** as a weighted analysis factor
+### Analysis Page  
+![You Got Options Analysis](static/screenshots/yougotoptions_analysis.png)
 
-### Live Trade Monitor
-- **Real-time trade execution tracking**
-- **Position monitoring** with P&L updates
-- **Order management interface**
-- **Historical trade records** and performance metrics
-
-### Additional Features
-- **Pre-market momentum scanning** for early market insights
-- **Dynamic capital allocation** based on risk management rules
-- **Support for stock and crypto assets**
-- **Configurable logging system** for audit trails
-- **Placeholder hooks for notifications** (SMS, email, webhooks)
+### Live Trade Monitor  
+![You Got Options Live Monitor](static/screenshots/yougotoptions_livemonitor.png)
 
 ---
 
 ## 🛠 Tech Stack
 
-**Frontend:**
-- HTML5
-- CSS3 (Neon UI theme with custom animations)
-- JavaScript (ES6+)
-- Interactive transitions and custom effects
+**Frontend:**  
+- HTML  
+- CSS (Neon theme)  
+- JavaScript  
 
-**Backend (Optional):**
-- Python 3.8+
-- Flask (lightweight web framework)
-- Technical indicator calculations
-- Market data integration logic
+**Backend (optional versions):**  
+- Python  
+- Flask  
 
-**Tools & Deployment:**
-- Git / GitHub (version control)
-- Render (hosting platform)
-- ChatGPT + Warp (AI-assisted development)
+**Tools & Deployment:**  
+- Git / GitHub  
+- Render  
+- ChatGPT + Warp  
 
 ---
 
 ## 📂 Project Structure
 
 ```
-you-got-options/
-├── index.html                 # Main dashboard page
-├── analysis.html              # Advanced analysis page
-├── monitor.html               # Live trade monitor page
-├── style.css                  # Global styles & neon theme
-├── dashboard.js               # Dashboard logic & interactions
-├── analysis.js                # Analysis page functionality
-├── monitor.js                 # Trade monitor functionality
-├── static/
-│   ├── screenshots/
-│   │   ├── yougotoptions_dashboard.png
-│   │   ├── yougotoptions_analysis.png
-│   │   └── yougotoptions_livemonitor.png
-│   ├── icons/                 # UI icons and assets
-│   └── data/                  # Sample data files
-├── backend/                   # (Optional) Python Flask app
-│   ├── app.py                 # Flask server & API routes
-│   ├── indicators.py          # Technical indicator calculations
-│   ├── sentiment.py           # News sentiment analysis
-│   ├── trader.py              # Trading logic & execution
-│   ├── config.py              # Configuration settings
-│   └── requirements.txt        # Python dependencies
-├── config/
-│   ├── dashboard.config.json  # Dashboard customization
-│   ├── indicators.config.json  # Indicator settings
-│   └── trader.config.json     # Trading parameters
-├── docs/                      # Documentation
-│   ├── API.md                 # API documentation
-│   ├── SETUP.md               # Setup guide
-│   └── FEATURES.md            # Feature details
-├── tests/                     # Test suite
-│   ├── test_indicators.py     # Indicator tests
-│   ├── test_sentiment.py      # Sentiment analysis tests
-│   └── test_trader.py         # Trading logic tests
-├── .gitignore
-├── README.md
-├── LICENSE
-└── Render.yaml                # Render deployment config
-
+you-got-options/  
+├── index.html  
+├── styles.css  
+├── script.js  
+├── app.py (optional)  
+├── static/  
+│   └── screenshots/  
+├── README.md  
+└── requirements.txt
 ```
-
-### File Descriptions
-
-**Frontend (HTML/CSS/JS):**
-- `index.html` - Dashboard landing page with market overview
-- `analysis.html` - Technical analysis tools and charting
-- `monitor.html` - Live trade execution and position tracking
-- `style.css` - Centralized styling with neon color scheme
-- `dashboard.js` - Dashboard interactivity and data binding
-- `analysis.js` - Chart rendering and analysis tools
-- `monitor.js` - Real-time trade updates and notifications
-
-**Backend (Python/Flask):**
-- `app.py` - Main Flask application with REST API endpoints
-- `indicators.py` - RSI, MACD, volume, and trend calculations
-- `sentiment.py` - News sentiment scoring and integration
-- `trader.py` - Trading execution logic and order management
-- `config.py` - Environment variables and settings
-
-**Configuration:**
-- Dashboard config - Widget positioning, refresh rates
-- Indicator config - Thresholds, lookback periods, alert levels
-- Trader config - Position sizing, risk limits, asset lists
 
 ---
 
-## 🚀 Installation & Setup
+## ▶️ Installation
 
-### Prerequisites
-- Node.js 14+ (optional, for build tools)
-- Python 3.8+ (if using backend)
-- Git
-- Modern web browser (Chrome, Firefox, Safari, Edge)
+### Clone the repository
 
-### Frontend-Only Setup
+```bash
+git clone https://github.com/Elliott1985/you-got-options.git
+cd you-got-options
+```
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/yourusername/you-got-options.git
-   cd you-got-options
-   ```
+### Frontend Setup
 
-2. **Open in browser:**
+1. **Open in Browser:**
    ```bash
    open index.html
-   # or
-   python -m http.server 8000
-   # then visit http://localhost:8000
    ```
-
-### Full Setup (with Backend)
-
-1. **Clone the repository:**
+   Or use a local server:
    ```bash
-   git clone https://github.com/yourusername/you-got-options.git
-   cd you-got-options
+   python -m http.server 8000
    ```
+   Then visit `http://localhost:8000`
 
-2. **Set up Python environment:**
+### Backend Setup (Optional)
+
+1. **Create Virtual Environment:**
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
-   pip install -r backend/requirements.txt
    ```
 
-3. **Configure environment variables:**
+2. **Install Dependencies:**
    ```bash
-   cp .env.example .env
-   # Edit .env with your API keys and settings
+   pip install -r requirements.txt
    ```
 
-4. **Run the Flask server:**
+3. **Run Flask Server:**
    ```bash
-   cd backend
    python app.py
    ```
 
-5. **Open in browser:**
-   ```bash
-   # Frontend will connect to http://localhost:5000
-   open http://localhost:5000
+4. **Access Application:**
+   ```
+   http://localhost:5000
    ```
 
 ---
 
-## 📖 Usage
+## ▶️ Usage
 
-### Dashboard
-1. Launch the application at `index.html`
-2. View key market metrics and portfolio overview
-3. Click on widgets to drill down into specific assets
-4. Use the navigation menu to access Analysis or Live Monitor
+### Dashboard  
+Shows live market signals and opportunities.
 
-### Analysis Page
-1. Navigate to **Analysis** from the dashboard
-2. Select an asset (stock ticker or crypto symbol)
-3. Choose timeframe and technical indicators
-4. Analyze patterns and identify trading signals
-5. Review news sentiment and volume trends
+### Analysis  
+Analyze tickers with optional budget.
 
-### Live Monitor
-1. Navigate to **Live Monitor** for active trades
-2. View open positions with real-time P&L
-3. Manage orders and set stop-loss/take-profit levels
-4. Review historical trade performance
+### Live Monitor  
+Track trades with stop loss + take profit.
+
+### Portfolio  
+(If implemented)
 
 ---
 
-## 📊 Dashboard Overview
+## 👨‍💻 My Role & Contributions
 
-### Main Dashboard Components
-- **Market Overview Panel** - Key indices, market sentiment
-- **Portfolio Summary** - Holdings, allocation, performance
-- **Signal Scanner** - Trending opportunities and alerts
-- **Recent Trades** - Latest executions with outcomes
-- **Market Calendar** - Upcoming events and economic releases
+I built:
 
-### Navigation
-- Dashboard (home)
-- Analysis (detailed market research)
-- Monitor (live trading)
-- Settings (configuration and preferences)
+- The UI/UX neon theme  
+- Navigation system  
+- Market dashboard  
+- Advanced analysis workflow  
+- Live trade monitor  
+- Deployment pipeline  
+- All code written or refined using AI-assisted development (ChatGPT + Warp)
+
+This project demonstrates:
+✔ Front-end engineering  
+✔ App structure  
+✔ Deployment skills  
+✔ Python + JS synergy  
+✔ Real-world problem-solving  
 
 ---
 
-## 🎨 Design Features
+## 📊 Technical Features
 
-- **Neon Color Scheme** - Electric blues, purples, and greens
-- **Responsive Layout** - Adapts to desktop and tablet screens
-- **Smooth Animations** - Interactive transitions and hover effects
-- **Dark Theme** - Optimized for extended market monitoring
-- **Accessibility** - ARIA labels, keyboard navigation
+### RSI-Based Trading Strategy
+- **RSI < 30**: Oversold (Bullish signal)
+- **RSI > 70**: Overbought (Bearish signal)
+- **30-70**: Neutral (Hold signal)
+
+### Real-Time Market Data
+- Live price feeds via market APIs
+- Real-time P&L calculations
+- Instant alert notifications
+
+### Dynamic UI
+- Neon-themed dark mode interface
+- Responsive design for all devices
+- Smooth animations and transitions
+- Multi-tab navigation system
 
 ---
 
 ## 🔧 Configuration
 
-### Customizing Indicators
-Edit `config/indicators.config.json`:
-```json
-{
-  "rsi": {
-    "period": 14,
-    "overbought": 70,
-    "oversold": 30
-  },
-  "macd": {
-    "fast": 12,
-    "slow": 26,
-    "signal": 9
-  },
-  "volume": {
-    "ma_period": 20,
-    "threshold": 1.5
-  }
-}
+### API Keys (if using backend)
+Create a `.env` file:
+```
+API_KEY=your_api_key_here
+SECRET_KEY=your_secret_key_here
 ```
 
-### Trading Parameters
-Edit `config/trader.config.json`:
-```json
-{
-  "position_size": 0.05,
-  "max_loss_percent": 2,
-  "profit_target_percent": 5,
-  "max_open_positions": 5
-}
-```
+### Customizing Themes
+Edit `styles.css` to modify:
+- Color scheme
+- Font styles
+- Animation speeds
+- Layout dimensions
 
 ---
 
-## 📝 API Endpoints (Backend)
-
-If using the Flask backend:
+## 📡 API Endpoints (Backend)
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/market/overview` | GET | Get market summary data |
-| `/api/indicators/<symbol>` | GET | Calculate indicators for asset |
-| `/api/sentiment/<symbol>` | GET | Get news sentiment score |
+| `/` | GET | Main dashboard |
+| `/api/analyze` | POST | Analyze stock with ticker |
+| `/api/market` | GET | Market overview data |
 | `/api/trades` | GET | Retrieve trade history |
-| `/api/trades` | POST | Execute new trade |
-| `/api/positions` | GET | Get open positions |
-| `/api/positions/<id>` | PUT | Update position (stop-loss, etc.) |
+| `/api/positions` | GET | Get active positions |
+| `/api/health` | GET | Health check |
 
 ---
 
 ## 🧪 Testing
 
-Run test suite (if backend is implemented):
-
+### Frontend Testing
 ```bash
-cd backend
+# Open browser developer console
+# Check for any JavaScript errors
+# Test all tabs and navigation
+```
+
+### Backend Testing (if implemented)
+```bash
 pytest tests/
 # or
-python -m unittest discover tests/
+python -m unittest discover
 ```
 
 ---
@@ -316,82 +243,110 @@ python -m unittest discover tests/
 ## 🚢 Deployment
 
 ### Deploy to Render
-
-1. **Connect GitHub repository** to Render
-2. **Set environment variables** in Render dashboard
-3. **Configure `Render.yaml`** for automated builds
-4. **Deploy:**
+1. Connect your GitHub repository to Render
+2. Set environment variables in Render dashboard
+3. Deploy:
    ```bash
-   git push
-   # Render automatically deploys on push
+   git push origin main
    ```
 
-### Deploy to Other Platforms
-- **Heroku** - See `Procfile` and `requirements.txt`
-- **AWS** - Use Lambda + API Gateway for serverless
-- **DigitalOcean** - Deploy as Docker container
+### Deploy to Heroku
+```bash
+heroku create you-got-options
+git push heroku main
+```
+
+### Deploy to AWS
+- Use AWS Lambda for serverless
+- Configure API Gateway for endpoints
+- Use CloudFront for CDN
+
+---
+
+## 🔗 Deployment
+Hosted on Render:  
+https://you-got-options.onrender.com
 
 ---
 
 ## 📚 Documentation
 
-- [Setup Guide](docs/SETUP.md) - Detailed installation instructions
-- [API Documentation](docs/API.md) - Backend API reference
-- [Features Guide](docs/FEATURES.md) - Detailed feature explanations
-- [Trading Strategy](docs/STRATEGY.md) - Signal generation logic
+- **Frontend Code**: `script.js` - Main application logic
+- **Styling**: `styles.css` - UI theme and layouts
+- **Backend**: `app.py` - Flask server (if implemented)
+- **Data**: `static/` - Screenshots and assets
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please follow these steps:
+Contributions are welcome! To contribute:
 
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/your-feature`
-3. Make your changes and commit: `git commit -m 'Add your feature'`
-4. Push to the branch: `git push origin feature/your-feature`
-5. Submit a pull request
+2. Create a feature branch:
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+3. Make your changes
+4. Commit your changes:
+   ```bash
+   git commit -m "Add your feature description"
+   ```
+5. Push to the branch:
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+6. Open a Pull Request
 
 ### Code Standards
-- Write clean, readable code with comments
-- Follow PEP 8 (Python) and Airbnb JavaScript style guide
-- Add tests for new features
-- Update documentation as needed
+- Write clean, readable code
+- Add comments for complex logic
+- Follow existing code style
+- Test before submitting PR
 
 ---
 
-## 📄 License
-
-This project is licensed under the MIT License – see the [LICENSE](LICENSE) file for details.
-
----
-
-## 🙋 Support & Questions
-
-For questions, issues, or suggestions:
-- Open an issue on GitHub
-- Check existing documentation in `/docs`
-- Review the API documentation for backend integration
+## 📜 License  
+This project is for educational and portfolio purposes.
 
 ---
 
-## 🔮 Roadmap
+## ⚠️ Disclaimer
 
-- [ ] Live market data integration (Alpaca API, IEX Cloud)
+**Educational Purposes Only** - This application is for learning and research purposes only. It should not be considered as financial advice. Options trading involves significant risk and can result in substantial losses. Always consult with a qualified financial advisor before making trading decisions.
+
+---
+
+## 🎯 Future Enhancements
+
+- [ ] Live market data integration (Alpaca, IEX Cloud)
 - [ ] Advanced charting library (TradingView Lightweight Charts)
-- [ ] Machine learning models for signal generation
+- [ ] Machine learning for signal prediction
 - [ ] Mobile app (React Native)
 - [ ] Discord/Slack notifications
 - [ ] Backtesting engine
-- [ ] Paper trading mode
+- [ ] Paper trading simulation
 - [ ] Multi-account support
+- [ ] Portfolio optimization tools
+- [ ] Risk analysis dashboard
 
 ---
 
 ## 👥 Credits
 
-Built with ChatGPT + Warp AI-assisted development workflow, showcasing modern trading UI/UX and rapid prototyping capabilities.
+Built with **ChatGPT + Warp** AI-assisted development workflow, showcasing modern trading UI/UX design and rapid prototyping capabilities.
+
+---
+
+## 📞 Support
+
+For questions, issues, or suggestions:
+- Open an issue on GitHub
+- Check the documentation
+- Review the source code comments
 
 ---
 
 **Happy Trading! 📈**
+
+v2.0 - Advanced Trading Platform with Real-time Monitoring
